@@ -1,0 +1,12 @@
+﻿  Entity.cpp
+C:\Users\23061\source\repos\SDL Lab4\Entity.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+  main.cpp
+C:\Users\23061\source\repos\SDL Lab4\main.cpp(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\23061\source\repos\SDL Lab4\Entity.h(1,1): warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+C:\Users\23061\source\repos\SDL Lab4\main.cpp(178,36): warning C4244: “参数”: 从“double”转换到“int”，可能丢失数据
+C:\Users\23061\source\repos\SDL Lab4\main.cpp(243,26): warning C4244: “初始化”: 从“double”转换到“float”，可能丢失数据
+C:\Users\23061\source\repos\SDL Lab4\main.cpp(310,23): warning C4018: “<”: 有符号/无符号不匹配
+  正在生成代码...
+  SDLSimple.vcxproj -> C:\Users\23061\source\repos\SDL Lab4\Debug\SDLSimple.exe
+  'pwsh.exe' 不是内部或外部命令，也不是可运行的程序
+  或批处理文件。
