@@ -1,26 +1,32 @@
 #ifndef ENTITY_H
 #define ENTITY_H
 
+
 #include "glm/glm.hpp"
 #include "ShaderProgram.h"
-enum EntityType { PLATFORM, PLAYER, ENEMY, TRAP};
-enum AIType { WALKER, GUARD };
+#include <vector>;
+
+enum EntityType { PLATFORM, PLAYER, ENEMY };
+enum AIType { FLY, EXPLODER, JUMPER };
 enum AIState { WALKING, IDLE, ATTACKING };
 
 
 enum AnimationDirection { LEFT, RIGHT, UP, DOWN };
+enum Animation { STAND, ATTACK_RIGHT, ATTACK_LEFT, MOVE_LEFT, MOVE_RIGHT,DEATH };
 
 class Entity
 {
 private:
     bool m_is_active = true;
 
-    int m_walking[4][4]; // 4x4 array for walking animations
+    int m_walking[2][8]; // 4x4 array for walking animations
 
 
     EntityType m_entity_type;
     AIType     m_ai_type;
     AIState    m_ai_state;
+    Animation m_current_animation;
+
     // ————— TRANSFORMATIONS ————— //
     glm::vec3 m_movement;
     glm::vec3 m_position;
@@ -36,9 +42,12 @@ private:
     bool m_is_jumping;
 
     // ————— TEXTURES ————— //
+    std::vector<GLuint> m_texture_ids;  // Vector of texture IDs for different animations
     GLuint    m_texture_id;
 
     // ————— ANIMATION ————— //
+    std::vector<std::vector<int>> m_animations;  // Indices for each animation type
+
     int m_animation_cols;
     int m_animation_frames,
         m_animation_index,
@@ -58,41 +67,53 @@ private:
 public:
     // ————— STATIC VARIABLES ————— //
     static constexpr int SECONDS_PER_FRAME = 4;
-    Entity* collidedPlatform;  // 指向碰撞的平台
 
     // ————— METHODS ————— //
     Entity();
-    Entity(GLuint texture_id, float speed, glm::vec3 acceleration, float jump_power, int walking[4][4], float animation_time,
-        int animation_frames, int animation_index, int animation_cols,
-        int animation_rows, float width, float height, EntityType EntityType);
-    Entity(GLuint texture_id, float speed, float width, float height, EntityType EntityType); // Simpler constructor
-    Entity(GLuint texture_id, float speed, float width, float height, EntityType EntityType, AIType AIType, AIState AIState); // AI constructor
+    Entity(std::vector<GLuint> texture_ids, float speed, glm::vec3 acceleration, float jump_power, int walking[2][8], std::vector<std::vector<int>> animations, float animation_time, int animation_frames, int animation_index, int animation_cols, int animation_rows, float width, float height, EntityType EntityType);
+
+    //Platform constructor
+    Entity(GLuint texture_id, float speed, float width, float height, EntityType EntityType);
+
+    // AI constructor
+    Entity(std::vector<GLuint> texture_ids, float speed, float width, float height, std::vector<std::vector<int>> animations, EntityType EntityType, AIType AIType, AIState AIState);
+
     ~Entity();
 
-    void draw_sprite_from_texture_atlas(ShaderProgram* program, GLuint texture_id, int index);
     bool const check_collision(Entity* other) const;
 
     void const check_collision_y(Entity* collidable_entities, int collidable_entity_count);
     void const check_collision_x(Entity* collidable_entities, int collidable_entity_count);
-    void update(float delta_time, Entity* player, Entity* collidable_entities, int collidable_entity_count);
-    //void draw_text(ShaderProgram* program, GLuint font_texture_id, std::string text, float font_size, float spacing, glm::vec3 position);
+
+    void check_window_collision(float window_width, float window_height);
+
+    void check_collision_with_enemy(Entity* enemies, int collidable_enemy_count);
+
+    void update(float delta_time, Entity* player, Entity* collidable_entities, int collidable_entity_count, Entity* enemies=nullptr, int collidable_enemy_count=0);
+
+
+
+
     void render(ShaderProgram* program);
 
     void ai_activate(Entity* player);
-    void ai_walk();
-    void ai_guard(Entity* player);
+    void ai_jumper(Entity* player);
+    void ai_exploder(Entity* player);
+    void ai_fly(Entity* player);
 
+    void set_animation_state(Animation new_animation);
+    void draw_sprite_from_texture_atlas(ShaderProgram* program);
     void normalise_movement() { m_movement = glm::normalize(m_movement); }
 
     void face_left() { m_animation_indices = m_walking[LEFT]; }
     void face_right() { m_animation_indices = m_walking[RIGHT]; }
-    void face_up() { m_animation_indices = m_walking[UP]; }
-    void face_down() { m_animation_indices = m_walking[DOWN]; }
+    //void face_up() { m_animation_indices = m_walking[UP]; }
+    //void face_down() { m_animation_indices = m_walking[DOWN]; }
 
-    void move_left() { m_acceleration.x += -0.5f; m_movement.x = -1.0f; face_left(); }
-    void move_right() { m_acceleration.x += 0.5f; m_movement.x = 1.0f; face_right(); }
-    void move_up() { m_acceleration.y += 0.5f; m_movement.y = 1.0f;  face_up(); }
-    void move_down() { m_acceleration.y += -0.5f; m_movement.y = -1.0f; face_down(); }
+    void move_left() { m_movement.x = -1.0f; face_left(); }
+    void move_right() { m_movement.x = 1.0f;  face_right(); }
+    //void move_up() { m_movement.y = 1.0f;  face_up(); }
+    //void move_down() { m_movement.y = -1.0f; face_down(); }
 
     void const jump() { m_is_jumping = true; }
 
@@ -111,11 +132,10 @@ public:
     bool      const get_collided_bottom() const { return m_collided_bottom; }
     bool      const get_collided_right() const { return m_collided_right; }
     bool      const get_collided_left() const { return m_collided_left; }
-    float get_width() const { return m_width; }
-    float get_height() const { return m_height; }
+    bool      const get_is_active() const { return m_is_active; }
 
     void activate() { m_is_active = true; };
-    void deactivate() { m_is_active = false; };
+    void deactivate() { m_is_active = false;};
     // ————— SETTERS ————— //
     void const set_entity_type(EntityType new_entity_type) { m_entity_type = new_entity_type; };
     void const set_ai_type(AIType new_ai_type) { m_ai_type = new_ai_type; };
@@ -137,11 +157,11 @@ public:
     void const set_height(float new_height) { m_height = new_height; }
 
     // Setter for m_walking
-    void set_walking(int walking[4][4])
+    void set_walking(int walking[2][8])
     {
-        for (int i = 0; i < 4; ++i)
+        for (int i = 0; i < 2; ++i)
         {
-            for (int j = 0; j < 4; ++j)
+            for (int j = 0; j < 8; ++j)
             {
                 m_walking[i][j] = walking[i][j];
             }
