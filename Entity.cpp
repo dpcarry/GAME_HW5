@@ -24,18 +24,12 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "ShaderProgram.h"
 #include "Entity.h"
+#include "GlobalState.h"
 
 void Entity::ai_activate(Entity* player)
 {
     switch (m_ai_type)
     {
-    case JUMPER:
-        ai_jumper(player);
-        break;
-    case EXPLODER:
-        ai_exploder(player);
-        break;
-
     case FLY:
         ai_fly(player);
         break;
@@ -45,23 +39,25 @@ void Entity::ai_activate(Entity* player)
     }
 }
 
-void Entity::ai_jumper(Entity* player)
+void Entity::ai_fly(Entity* player)
 {
     m_current_animation = STAND;
     switch (m_ai_state) {
     case IDLE:
+        //std::cout << "idle" << m_position.x << " " << m_position.y << std::endl;
         m_current_animation = STAND;
         set_animation_state(STAND);
         if (glm::distance(m_position, player->get_position()) < 4.0f) m_ai_state = WALKING;
         break;
     case WALKING:
+        //std::cout << "walk" << m_position.x << " "<< m_position.y << std::endl;
         if (m_position.x > player->get_position().x) {
             if (m_position.y > player->get_position().y) {
                 m_movement = glm::vec3(-1.0f, -1.0f, 0.0f);
             }
             else {
                 m_movement = glm::vec3(-1.0f, 1.0f, 0.0f);
-            }     
+            }
         }
         else {
             if (m_position.y > player->get_position().y) {
@@ -77,7 +73,7 @@ void Entity::ai_jumper(Entity* player)
         break;
 
     case ATTACKING:
-
+        //std::cout << "attack" << m_position.x << " " << m_position.y << std::endl;
         if (m_position.x > player->get_position().x) {
             m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
             m_speed = 1.2f;
@@ -94,88 +90,7 @@ void Entity::ai_jumper(Entity* player)
         break;
     }
 }
-void Entity::ai_exploder(Entity* player)
-{
-    static float explosion_timer = 0.0f; // Timer to track explosion duration
-    switch (m_ai_state) {
-        case IDLE:
-            m_current_animation = MOVE_RIGHT;
-            set_animation_state(MOVE_RIGHT);
-            if (glm::distance(m_position, player->get_position()) < 1.0f) {
-                m_ai_state = ATTACKING;
-                explosion_timer = 0.9f;
-            }
-            break;
 
-        case ATTACKING:
-            m_current_animation = DEATH; // Assuming DEATH animation represents explosion
-            set_animation_state(DEATH);
-
-            // Reduce the explosion timer
-            explosion_timer -= 1.0f / 60.0f; // Assuming a 60 FPS rate
-            if (explosion_timer <= 0.0f) {
-                // Switch to DEATH state after the explosion animation is done
-                deactivate(); // Remove from the game
-                if (glm::distance(m_position, player->get_position()) < 1.0f) {
-                    player->deactivate();
-                }
-            }
-            break;
-        default:
-            break;
-    }
-    
-}
-
-void Entity::ai_fly(Entity* player)
-{
-    m_current_animation = STAND;
-    switch (m_ai_state) {
-    case IDLE:
-        //std::cout << "its idle" << std::endl;
-        m_current_animation = STAND;
-        set_animation_state(STAND);
-        if (glm::distance(m_position, player->get_position()) < 3.0f) m_ai_state = WALKING;
-        break;
-
-    case WALKING:
-        //std::cout << "its walking" << std::endl;
-        if (m_position.x > player->get_position().x) {
-            m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
-        }
-        else {
-            m_movement = glm::vec3(1.0f, 0.0f, 0.0f);
-            m_current_animation = MOVE_RIGHT;
-            set_animation_state(MOVE_RIGHT);
-
-        }
-        if (glm::distance(m_position, player->get_position()) < 2.0f) m_ai_state = ATTACKING;
-
-        break;
-
-    case ATTACKING:
-        
-        if (m_position.x > player->get_position().x) {
-            m_movement = glm::vec3(-1.0f, 0.0f, 0.0f);
-            m_speed = 1.2f;
-            m_current_animation = ATTACK_LEFT;
-            set_animation_state(ATTACK_LEFT);
-        }
-        else {
-            m_movement = glm::vec3(1.0f, 0.0f, 0.0f);
-            m_speed = 1.2f;
-            m_current_animation = ATTACK_RIGHT;
-            set_animation_state(ATTACK_RIGHT);
-        }
-        if (glm::distance(m_position, player->get_position()) > 3.0f) m_ai_state = IDLE;
-        break;
-
-    case DEATH:
-        break;
-    default:
-        break;
-    }
-}
 
 // Default constructor
 Entity::Entity()
@@ -237,7 +152,7 @@ void Entity::set_animation_state(Animation new_animation)
 
     m_current_animation = new_animation;
     m_animation_indices = m_animations[m_current_animation].data();
-    
+
     //std::cout << m_entity_type << m_animations[m_current_animation].data() << std::endl;
     // Update the texture and animation indices based on the current animation
     if (m_entity_type == PLAYER) {
@@ -294,41 +209,6 @@ void Entity::set_animation_state(Animation new_animation)
                 //std::cout << m_animation_frames << "  " << m_animation_cols << std::endl;
             }
         }
-        else if (m_ai_type == EXPLODER) {
-            if (new_animation == DEATH)
-            {
-                m_animation_frames = m_animations[5].size();
-                m_animation_cols = m_animations[5].size();
-                //std::cout << m_animation_frames << "  " << m_animation_cols << std::endl;
-
-            }
-            else if (new_animation == STAND)
-            {
-                m_animation_frames = m_animations[0].size();
-                m_animation_cols = m_animations[0].size();
-            }
-        }
-        else if (m_ai_type == JUMPER) {
-            // std::cout << "fly" << std::endl; yes
-            //std::cout << m_current_animation << std::endl; 0
-            if (new_animation == ATTACK_LEFT)
-            {
-                m_animation_frames = m_animations[2].size();
-                m_animation_cols = m_animations[2].size();
-            }
-            else if (new_animation == STAND)
-            {
-                m_animation_frames = m_animations[0].size();
-                m_animation_cols = m_animations[0].size();
-                //std::cout << m_animation_frames << "  " << m_animation_cols << std::endl;
-            }
-            else if (new_animation == MOVE_RIGHT)
-            {
-                m_animation_frames = m_animations[4].size();
-                m_animation_cols = m_animations[4].size();
-                //std::cout << m_animation_frames << "  " << m_animation_cols << std::endl;
-            }
-        }
     }
 
 
@@ -341,9 +221,9 @@ void Entity::draw_sprite_from_texture_atlas(ShaderProgram* program)
     if (m_entity_type != PLATFORM) {
         current_texture = m_texture_ids[m_current_animation];  // Get the right texture
         //std::cout << "Drawing entity of type: " << m_entity_type
-            //<< ", Animation: " << m_current_animation
-            //<< ", Texture ID: " << current_texture << std::endl;
-    
+          //<< ", Animation: " << m_current_animation
+            //<< ", Texture ID: " << current_texture << ", Animation Index" << m_animation_index << std::endl;
+
     }
 
 
@@ -354,9 +234,7 @@ void Entity::draw_sprite_from_texture_atlas(ShaderProgram* program)
 
     float u_coord = (float)(m_animation_index % m_animation_cols) / (float)m_animation_cols;
     float v_coord = (float)(m_animation_index / m_animation_cols) / (float)m_animation_rows;
-    if (m_ai_type == EXPLODER) {
-        //std::cout << u_coord << "  " << v_coord << std::endl;
-    }
+
     float width = 1.0f / (float)m_animation_cols;
     float height = 1.0f / (float)m_animation_rows;
 
@@ -388,7 +266,7 @@ void Entity::draw_sprite_from_texture_atlas(ShaderProgram* program)
     glDisableVertexAttribArray(program->get_position_attribute());
     glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
 
- 
+
 }
 
 bool const Entity::check_collision(Entity* other) const
@@ -404,7 +282,7 @@ void const Entity::check_collision_y(Entity* collidable_entities, int collidable
     for (int i = 0; i < collidable_entity_count; i++)
     {
         Entity* collidable_entity = &collidable_entities[i];
-
+        if (!collidable_entity->m_is_active) continue;
         if (check_collision(collidable_entity))
         {
             float y_distance = fabs(m_position.y - collidable_entity->m_position.y);
@@ -434,6 +312,7 @@ void const Entity::check_collision_x(Entity* collidable_entities, int collidable
     for (int i = 0; i < collidable_entity_count; i++)
     {
         Entity* collidable_entity = &collidable_entities[i];
+        if (!collidable_entity->m_is_active) continue;
 
         if (check_collision(collidable_entity))
         {
@@ -452,6 +331,7 @@ void const Entity::check_collision_x(Entity* collidable_entities, int collidable
             {
                 m_position.x += x_overlap;
                 m_velocity.x = 0;
+                
 
                 // Collision!
                 m_collided_left = true;
@@ -460,6 +340,103 @@ void const Entity::check_collision_x(Entity* collidable_entities, int collidable
     }
 }
 
+void const Entity::check_collision_y(Map* map)
+{
+    // Probes for tiles above
+    glm::vec3 top = glm::vec3(m_position.x, m_position.y + (m_height / 2), m_position.z);
+    glm::vec3 top_left = glm::vec3(m_position.x - (m_width / 2), m_position.y + (m_height / 2), m_position.z);
+    glm::vec3 top_right = glm::vec3(m_position.x + (m_width / 2), m_position.y + (m_height / 2), m_position.z);
+
+    // Probes for tiles below
+    glm::vec3 bottom = glm::vec3(m_position.x, m_position.y - (m_height / 2), m_position.z);
+    glm::vec3 bottom_left = glm::vec3(m_position.x - (m_width / 2), m_position.y - (m_height / 2), m_position.z);
+    glm::vec3 bottom_right = glm::vec3(m_position.x + (m_width / 2), m_position.y - (m_height / 2), m_position.z);
+
+    float penetration_x = 0;
+    float penetration_y = 0;
+
+    // If the map is solid, check the top three points
+    if (map->is_solid(top, &penetration_x, &penetration_y) && m_velocity.y > 0)
+    {
+        m_position.y -= penetration_y;
+        m_velocity.y = 0;
+        m_collided_top = true;
+    }
+    else if (map->is_solid(top_left, &penetration_x, &penetration_y) && m_velocity.y > 0)
+    {
+        m_position.y -= penetration_y;
+        m_velocity.y = 0;
+
+        m_collided_top = true;
+    }
+    else if (map->is_solid(top_right, &penetration_x, &penetration_y) && m_velocity.y > 0)
+    {
+        m_position.y -= penetration_y;
+        m_velocity.y = 0;
+
+        m_collided_top = true;
+    }
+
+    // And the bottom three points
+    if (map->is_solid(bottom, &penetration_x, &penetration_y) && m_velocity.y < 0)
+    {
+        m_position.y += penetration_y;
+        m_velocity.y = 0;
+
+        m_collided_bottom = true;
+        //std::cout << "bot" << std::endl;
+    }
+    else if (map->is_solid(bottom_left, &penetration_x, &penetration_y) && m_velocity.y < 0)
+    {
+        m_position.y += penetration_y;
+        m_velocity.y = 0;
+
+        m_collided_bottom = true;
+    }
+    else if (map->is_solid(bottom_right, &penetration_x, &penetration_y) && m_velocity.y < 0)
+    {
+        m_position.y += penetration_y;
+        m_velocity.y = 0;
+
+        m_collided_bottom = true;
+
+    }
+}
+
+void const Entity::check_collision_x(Map* map)
+{
+    // Probes for tiles; the x-checking is much simpler
+    glm::vec3 left = glm::vec3(m_position.x - (m_width / 2), m_position.y, m_position.z);
+    glm::vec3 right = glm::vec3(m_position.x + (m_width / 2), m_position.y, m_position.z);
+
+    float penetration_x = 0;
+    float penetration_y = 0;
+
+    if (map->is_solid(left, &penetration_x, &penetration_y) && m_velocity.x < 0)
+    {
+        m_position.x += penetration_x;
+        m_velocity.x = 0;
+        m_collided_left = true;
+    }
+    if (map->is_solid(right, &penetration_x, &penetration_y) && m_velocity.x > 0)
+    {
+        m_position.x -= penetration_x;
+        m_velocity.x = 0;
+        m_collided_right = true;
+    }
+}
+
+void Entity::lose_life() {
+    m_position = glm::vec3(1.0f, -5.0f, 0.0f);
+
+    if (player_lives > 0) {
+        player_lives--;
+
+    }
+    if (player_lives == 0) {
+        m_is_active = false;
+    }
+}
 void Entity::check_window_collision(float window_width, float window_height)
 {
     float half_width = m_width / 2.0f;
@@ -486,15 +463,19 @@ void Entity::check_window_collision(float window_width, float window_height)
         m_position.y = -window_height / 2.0f + half_height;
         m_velocity.y = 0.0f;
         m_collided_bottom = true;
+        lose_life();
     }
     // 顶部边界碰撞
     else if (m_position.y + half_height > window_height / 2.0f)
     {
         m_position.y = window_height / 2.0f - half_height;
         m_velocity.y = 0.0f;
+
         m_collided_top = true;
     }
 }
+
+
 
 void Entity::check_collision_with_enemy(Entity* enemies, int collidable_enemy_count)
 {
@@ -503,43 +484,36 @@ void Entity::check_collision_with_enemy(Entity* enemies, int collidable_enemy_co
         Entity* enemy = &enemies[i];
         if (!enemy->m_is_active) continue;
         // 如果玩家和敌人发生碰撞
-        if (check_collision(enemy) && enemy->m_ai_type != EXPLODER)
+        if (check_collision(enemy) && enemy)
         {
             // 玩家正在攻击
-            
+
             if (m_current_animation == ATTACK_LEFT || m_current_animation == ATTACK_RIGHT)
             {
                 // 敌人消失
                 enemy->deactivate();  // 设定敌人失效
             }
             else if (m_current_animation == DEATH) {
+                std::cout << "collision" << std::endl;
+
                 enemy->deactivate();  // 设定敌人失效
             }
             // 如果玩家没有攻击，而敌人正在攻击
             else if (enemy->get_ai_state() == ATTACKING)
             {
-                // 玩家输了
-                m_is_active = false; // 玩家失效，表示游戏失败
-            }
-        }
-        if (check_collision(enemy) && enemy->m_ai_type == EXPLODER)
-        {
-            // 玩家正在攻击
-            if (m_current_animation == ATTACK_LEFT || m_current_animation == ATTACK_RIGHT)
-            {
-                enemy->deactivate();  // 设定敌人失效
-            }
-            else if (m_current_animation == DEATH) {
-                enemy->deactivate();  // 设定敌人失效
+                lose_life();// 玩家输了
+
             }
         }
 
     }
 }
 
-void Entity::update(float delta_time, Entity* player, Entity* collidable_entities,  int collidable_entity_count, Entity* enemies, int collidable_enemy_count)
+void Entity::update(float delta_time, Entity* player, Entity* collidable_entities, int collidable_entity_count, Map* map)
 {
-    if (!m_is_active) return;
+    if (!m_is_active) {
+        return;
+    }
 
     m_collided_top = false;
     m_collided_bottom = false;
@@ -552,42 +526,54 @@ void Entity::update(float delta_time, Entity* player, Entity* collidable_entitie
     }
     if (m_animation_indices != NULL)
     {
-            m_animation_time += delta_time;
-            float frames_per_second = (float)1 / SECONDS_PER_FRAME;
-            //std::cout << m_ai_type << std::endl;
-            if (m_animation_time >= frames_per_second)
-            {
-                m_animation_time = 0.0f;
-                m_animation_index++;
+        m_animation_time += delta_time;
+        float frames_per_second = (float)1 / SECONDS_PER_FRAME;
+        //std::cout << m_ai_type << std::endl;
+        if (m_animation_time >= frames_per_second)
+        {
+            m_animation_time = 0.0f;
+            m_animation_index++;
 
-                if (m_animation_index >= m_animation_frames)
-                {
-                    m_animation_index = 0;
-                }
+            if (m_animation_index >= m_animation_frames)
+            {
+                m_animation_index = 0;
             }
+        }
     }
 
-    m_velocity.x = m_movement.x * m_speed;
-    if (m_ai_type == JUMPER) {
+    if ((m_entity_type == ENEMY) && (m_ai_type == FLY)) {
         m_velocity.y = m_movement.y * m_speed;
 
     }
+    check_collision_with_enemy(collidable_entities, collidable_entity_count);
 
+    m_velocity.x = m_movement.x * m_speed;
+
+    //std::cout << "velocity before" << m_velocity.y << std::endl;
     m_velocity += m_acceleration * delta_time;
-
+    //std::cout << "acc" << m_acceleration.y << std::endl;
+    //std::cout << "delta"<<delta_time << std::endl;
     m_position.y += m_velocity.y * delta_time;
+    //std::cout << "m_delta" << m_velocity.y <<" * " << delta_time << std::endl;
+    //std::cout << "velocity after" << m_velocity.y << std::endl;
+    //std::cout << "position y" << m_position.y << std::endl;
     check_collision_y(collidable_entities, collidable_entity_count);
+    check_collision_y(map);
 
 
     m_position.x += m_velocity.x * delta_time;
     check_collision_x(collidable_entities, collidable_entity_count);
-    check_collision_with_enemy(enemies, collidable_enemy_count);
-    check_window_collision(10.0f, 8.0f);
+    check_collision_x(map);
+
+    check_window_collision(80.0f, 18.0f);
     if (m_is_jumping)
     {
         m_is_jumping = false;
         m_velocity.y += m_jumping_power;
+        //std::cout << m_velocity.y << std::endl;
     }
+    //std::cout << m_velocity.y << std::endl;
+
 
     m_model_matrix = glm::mat4(1.0f);
     m_model_matrix = glm::translate(m_model_matrix, m_position);
@@ -602,14 +588,18 @@ void Entity::render(ShaderProgram* program)
 {
     if (!m_is_active) {
         return;
+        std::cout << "inactive" << std::endl;
     }
     program->set_model_matrix(m_model_matrix);
 
     if (m_animation_indices != NULL)
     {
         draw_sprite_from_texture_atlas(program);
+        //std::cout << m_entity_type << std::endl;
+
         return;
     }
+    //std::cout << "here" << std::endl;
 
     float vertices[] = { -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5 };
     float tex_coords[] = { 0.0,  1.0, 1.0,  1.0, 1.0, 0.0,  0.0,  1.0, 1.0, 0.0,  0.0, 0.0 };
@@ -625,5 +615,7 @@ void Entity::render(ShaderProgram* program)
 
     glDisableVertexAttribArray(program->get_position_attribute());
     glDisableVertexAttribArray(program->get_tex_coordinate_attribute());
+    //std::cout << "Rendered entity at position: " << m_position.x << ", " << m_position.y << std::endl;
+
 }
 

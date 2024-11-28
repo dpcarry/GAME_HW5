@@ -5,9 +5,11 @@
 #include "glm/glm.hpp"
 #include "ShaderProgram.h"
 #include <vector>;
+#include "Map.h"
+
 
 enum EntityType { PLATFORM, PLAYER, ENEMY };
-enum AIType { FLY, EXPLODER, JUMPER };
+enum AIType { FLY };
 enum AIState { WALKING, IDLE, ATTACKING };
 
 
@@ -18,6 +20,7 @@ class Entity
 {
 private:
     bool m_is_active = true;
+    int m_lives = 3;
 
     int m_walking[2][8]; // 4x4 array for walking animations
 
@@ -67,7 +70,6 @@ private:
 public:
     // ————— STATIC VARIABLES ————— //
     static constexpr int SECONDS_PER_FRAME = 4;
-
     // ————— METHODS ————— //
     Entity();
     Entity(std::vector<GLuint> texture_ids, float speed, glm::vec3 acceleration, float jump_power, int walking[2][8], std::vector<std::vector<int>> animations, float animation_time, int animation_frames, int animation_index, int animation_cols, int animation_rows, float width, float height, EntityType EntityType);
@@ -85,20 +87,21 @@ public:
     void const check_collision_y(Entity* collidable_entities, int collidable_entity_count);
     void const check_collision_x(Entity* collidable_entities, int collidable_entity_count);
 
+    // Overloading our methods to check for only the map
+    void const check_collision_y(Map* map);
+    void const check_collision_x(Map* map);
+
     void check_window_collision(float window_width, float window_height);
 
     void check_collision_with_enemy(Entity* enemies, int collidable_enemy_count);
 
-    void update(float delta_time, Entity* player, Entity* collidable_entities, int collidable_entity_count, Entity* enemies=nullptr, int collidable_enemy_count=0);
+    void update(float delta_time, Entity* player, Entity* collidable_entities, int collidable_entity_count, Map* map);
 
-
-
+    void lose_life();
 
     void render(ShaderProgram* program);
 
     void ai_activate(Entity* player);
-    void ai_jumper(Entity* player);
-    void ai_exploder(Entity* player);
     void ai_fly(Entity* player);
 
     void set_animation_state(Animation new_animation);
@@ -133,6 +136,7 @@ public:
     bool      const get_collided_right() const { return m_collided_right; }
     bool      const get_collided_left() const { return m_collided_left; }
     bool      const get_is_active() const { return m_is_active; }
+    int      const get_life() const { return m_lives; }
 
     void activate() { m_is_active = true; };
     void deactivate() { m_is_active = false;};
@@ -155,6 +159,7 @@ public:
     void const set_jumping_power(float new_jumping_power) { m_jumping_power = new_jumping_power; }
     void const set_width(float new_width) { m_width = new_width; }
     void const set_height(float new_height) { m_height = new_height; }
+    void const set_lives(float new_lives) { m_lives = new_lives; }
 
     // Setter for m_walking
     void set_walking(int walking[2][8])
